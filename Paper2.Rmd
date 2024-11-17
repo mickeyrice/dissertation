@@ -1,0 +1,1383 @@
+---
+title: "Paper 2"
+output: 
+  html_notebook:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+Created by Mickey Rice
+October 10th, 2024
+
+# Load Libaries 
+```{r}
+library(psych)
+library(dplyr)
+library(tidyverse)
+library(apaTables)
+library(ggplot2)
+
+```
+
+# Load Data 
+```{r}
+PMD <- read_csv("PMD.csv")
+```
+
+# Recode variables 
+```{r}
+
+PMD$Sex1<- 0
+PMD$Sex1<-ifelse(PMD$Gender=="Male",-1, 1)
+
+
+PMD$Gender1<- 0
+PMD$Gender1<-ifelse(PMD$Gender=="Male", 0, 
+                    ifelse(PMD$Gender=="Female", 1, 2))
+
+## Explaining code : PM$Gender1<- 0 creates the new variable titled Gender1 
+## PM$Gender1<-ifelse(PM$Gender ==“Male”,0 , ifelse(PM$Gender=="Female", 1, 2))) says “if the Gender is male, they will be 0, if Gender is female, they will be 1, if Gender is anything else it will be 2" 
+
+```
+
+
+```{r}
+print(PMD)
+
+describe(PMD)
+```
+
+# Print correlation tables
+```{r}
+library(apaTables)
+
+# for Paper 2
+
+#zero order correlation table 
+desctable2 <- select(PMD, PP, N300, PRMQ1, Confidence, JOL, PHQ9, CESD, Age, Gender1)
+
+apa.cor.table(
+      desctable2,
+      filename = "desctablePaper2.doc",
+      table.number = 1,
+      show.conf.interval = TRUE,
+      show.sig.stars = TRUE,
+      landscape = TRUE
+)
+
+#zero order correlation table 
+desctable2 <- select(PMD, PP, N300, PRMQ1, Confidence, JOL, Motivation, ADHD, HrsSleep, Sleepiness, PosAff, NegAff, STAIS)
+
+apa.cor.table(
+      desctable2,
+      filename = "desctable2Paper2.doc",
+      table.number = 1,
+      show.conf.interval = TRUE,
+      show.sig.stars = TRUE,
+      landscape = TRUE
+)
+```
+
+# Correlations: Gender and age with variables
+```{r}
+gender <- lm(PHQ9 ~ Gender1, data = PMD)
+summary(gender)
+
+gender <- lm(CESD ~ Gender1, data = PMD)
+summary(gender)
+
+gender <- lm(PRMQ1 ~ Gender1, data = PMD)
+summary(gender)
+
+```
+
+## GenderMW
+```{r}
+# Gender
+
+# Recode for point biserial correlations
+PMD$GenderNew<- 0
+
+PMD$GenderNew<-ifelse(PMD$Gender=="Male", "Man", 
+                    ifelse(PMD$Gender=="Female", "Woman", "Trans"))
+
+# df1: Man = 0, Woman = 1. 
+df1 <- PMD[PMD$GenderNew %in% c("Man", "Woman"), ]
+df1$GenderMW <- ifelse(df1$GenderNew == "Man", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("PP", "N300", "PRMQ1", "Confidence", "JOL", "PHQ9", "CESD", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df1$GenderMW, df1[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+
+```
+## GenderWT
+```{r}
+# Recode for point biserial correlations
+# df2: Women = 0, Transgender + nonbinary = 1. 
+df2 <- PMD[PMD$GenderNew %in% c("Woman", "Trans"), ]
+df2$GenderWT <- ifelse(df2$GenderNew == "Woman", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("PP", "N300", "PRMQ1", "Confidence", "JOL", "PHQ9", "CESD", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df2$GenderWT, df2[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+```
+
+## GenderMT
+```{r}
+# Recode for point biserial correlations
+# df3: Men = 0, Transgender + nonbinary = 1.
+df3 <- PMD[PMD$GenderNew %in% c("Man", "Trans"), ]
+df3$GenderMT <- ifelse(df3$GenderNew == "Man", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("PP", "N300", "PRMQ1", "Confidence", "JOL", "PHQ9", "CESD", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df3$GenderMT, df3[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+
+```
+
+# Sample info
+
+```{r}
+PMD %>%
+  count(Gender)
+
+PMD %>%
+  count(Race)
+
+PMD %>%
+  count(Ethnicity)
+
+PMD %>%
+  count(Handedness)
+
+describe(PMD$PHQ9)
+
+describe(PMD$CESD)
+
+describe(PMD$JOL)
+
+describe(PMD$Accuracy)
+
+describe(PMD$RT)
+2093.87 - 282.68
+
+describe(PMD$Motivation)
+204 - 84
+
+describe(PMD$ADHD)
+
+describe(PMD$HrsSleep)
+
+describe(PMD$Sleepiness)
+
+PMD %>% count(PHQ9 <= 3)
+
+PMD %>% count(PHQ9 >= 15 & PHQ9 <= 19)
+
+PMD %>% count(PHQ9 >= 20)
+
+PMD %>% count(CESD <= 16)
+
+73/80
+
+```
+
+
+# Regression Main effects-------------------------------------------------------
+
+## Regression: Depression predicting Metamemory controlling for age and gender 
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(PRMQ1) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(Confidence) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(JOL) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit6)
+
+fit7 <- lm(scale(PRMQ1) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit7)
+
+fit8 <- lm(scale(Confidence) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit8)
+
+fit9 <- lm(scale(JOL) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit9)
+
+# fit10 <- lm(scale(PRMQ1) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit10)
+
+# fit11 <- lm(scale(Confidence) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit11)
+
+# fit12 <- lm(scale(JOL) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit12)
+```
+
+## Regression: Depression predicting Metamemory not controlling
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(PRMQ1) ~ scale(PHQ9), data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(Confidence) ~ scale(PHQ9), data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(JOL) ~ scale(PHQ9), data = PMD)
+summary(fit6)
+
+fit7 <- lm(scale(PRMQ1) ~ scale(CESD), data = PMD)
+summary(fit7)
+
+fit8 <- lm(scale(Confidence) ~ scale(CESD), data = PMD)
+summary(fit8)
+
+fit9 <- lm(scale(JOL) ~ scale(CESD), data = PMD)
+summary(fit9)
+```
+
+## Regression: Depression predicting N300 not controlling
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(N300) ~ scale(PHQ9), data = PMD)
+summary(fit4)
+
+fit7 <- lm(scale(N300) ~ scale(CESD), data = PMD)
+summary(fit7)
+
+# fit10 <- lm(scale(N300) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit10)
+
+```
+
+## Regression: Depression predicting PP not controlling
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(PP) ~ scale(PHQ9), data = PMD)
+summary(fit4)
+
+fit7 <- lm(scale(PP) ~ scale(CESD), data = PMD)
+summary(fit7)
+
+# fit10 <- lm(scale(N300) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit10)
+
+```
+
+
+## Regression: Depression predicting PP controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(PP) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit4)
+
+fit7 <- lm(scale(PP) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit7)
+
+# fit10 <- lm(scale(PP) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit10)
+
+```
+
+# Interaction effects-----------------------------------------------------------
+
+## Centering the variables for an interaction
+```{r}
+## centering the variable - most important for interaction
+PHQ9 <- PMD$PHQ9
+mean_PHQ9 <- mean(PHQ9)
+PHQ9_c <- PHQ9 - mean_PHQ9
+PMD$PHQ9_c <- PHQ9_c
+
+CESD <- PMD$CESD
+mean_CESD <- mean(CESD)
+CESD_c <- CESD - mean_CESD
+PMD$CESD_c <- CESD_c
+
+DASS <- PMD$DASS
+mean_DASS <- mean(DASS)
+DASS_c <- DASS - mean_DASS
+PMD$DASS_c <- DASS_c
+
+PRMQ1 <- PMD$PRMQ1
+mean_PRMQ1 <- mean(PRMQ1)
+PRMQ1_c <- PRMQ1 - mean_PRMQ1
+PMD$PRMQ1_c <- PRMQ1_c
+
+Confidence <- PMD$Confidence
+mean_Confidence <- mean(Confidence)
+Confidence_c <- Confidence - mean_Confidence
+PMD$Confidence_c <- Confidence_c
+
+N300 <- PMD$N300
+mean_N300 <- mean(N300)
+N300_c <- N300 - mean_N300
+PMD$N300_c <- N300_c
+
+PP <- PMD$PP
+mean_PP <- mean(PP)
+PP_c <- PP - mean_PP
+PMD$PP_c <- PP_c
+
+JOL <- PMD$JOL
+mean_JOL <- mean(JOL)
+JOL_c <- JOL - mean_JOL
+PMD$JOL_c <- JOL_c
+
+# PM$Gender1_f <- as.factor(PM$Gender1)
+
+# contrasts(PM$Gender1_f) <- contr.helmert(n = 3)
+
+```
+
+# Interaction: Depression and Metamemory on ERPs
+## PRMQ1
+```{r}
+## PP
+fit <- lm(PP ~ PHQ9_c * PRMQ1_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(PP ~ CESD_c * PRMQ1_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+# N300
+fit <- lm(N300 ~ PHQ9_c * PRMQ1_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(N300 ~ CESD_c * PRMQ1_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+
+# fit <- lm(PP ~ DASS_c * PRMQ1_c + DASS_c + PRMQ1_c, data = PMD)
+# summary(fit)
+
+# fit <- lm(N300 ~ DASS_c * PRMQ1_c + DASS_c + PRMQ1_c, data = PMD)
+# summary(fit)
+
+```
+# Interaction: Depression and Metamemory on ERPs not controlling
+## PRMQ1
+```{r}
+## PP
+fit <- lm(PP ~ PHQ9_c * PRMQ1_c, data = PMD)
+summary(fit)
+
+fit <- lm(PP ~ CESD_c * PRMQ1_c, data = PMD)
+summary(fit)
+
+# N300
+fit <- lm(N300 ~ PHQ9_c * PRMQ1_c, data = PMD)
+summary(fit)
+
+fit <- lm(N300 ~ CESD_c * PRMQ1_c, data = PMD)
+summary(fit)
+
+# fit <- lm(PP ~ DASS_c * PRMQ1_c + DASS_c + PRMQ1_c, data = PMD)
+# summary(fit)
+
+# fit <- lm(N300 ~ DASS_c * PRMQ1_c + DASS_c + PRMQ1_c, data = PMD)
+# summary(fit)
+```
+
+
+
+## Confidence
+```{r}
+# PP
+fit <- lm(PP ~ PHQ9_c * Confidence_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(PP ~ CESD_c * Confidence_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+# N300
+fit <- lm(N300 ~ PHQ9_c * Confidence_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(N300 ~ CESD_c * Confidence_c + Gender1 + Age, data = PMD)
+summary(fit)
+```
+
+## Confidence 
+```{r}
+# PP
+fit <- lm(PP ~ PHQ9_c * Confidence_c, data = PMD)
+summary(fit)
+
+fit <- lm(PP ~ CESD_c * Confidence_c, data = PMD)
+summary(fit)
+
+# N300
+fit <- lm(N300 ~ PHQ9_c * Confidence_c, data = PMD)
+summary(fit)
+
+fit <- lm(N300 ~ CESD_c * Confidence_c, data = PMD)
+summary(fit)
+```
+
+
+## JOL
+```{r}
+# PP
+fit <- lm(PP ~ PHQ9_c * JOL_c, data = PMD)
+summary(fit)
+
+fit <- lm(PP ~ CESD_c * JOL_c, data = PMD)
+summary(fit)
+
+# N300
+fit <- lm(N300 ~ PHQ9_c * JOL_c, data = PMD)
+summary(fit)
+
+fit <- lm(N300 ~ CESD_c * JOL_c, data = PMD)
+summary(fit)
+```
+## JOL
+```{r}
+# PP
+fit <- lm(PP ~ PHQ9_c * JOL_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(PP ~ CESD_c * JOL_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+# N300
+fit <- lm(N300 ~ PHQ9_c * JOL_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(N300 ~ CESD_c * JOL_c + Gender1 + Age, data = PMD)
+summary(fit)
+```
+
+
+## Simple slopes
+
+### Interaction of PRMQ and PHQ9 on N300
+```{r}
+library(jtools)
+library(rlang)
+library(interactions)
+
+fitInt <- lm(N300 ~ PHQ9_c * PRMQ1_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  PHQ9_c,
+  PRMQ1_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+
+## Graph
+```{r}
+library(interactions)
+library(ggplot2)
+
+fitInt <- lm(N300 ~ PHQ9_c * PRMQ1_c + Gender1 + Age, data = PMD)
+
+plot <- interact_plot(fitInt, pred = PHQ9_c, modx = PRMQ1_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = FALSE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+
+# Customize the axis titles
+plot <- plot + 
+  labs(x = "PHQ-9 Scores",  
+       y = "N300 Amplitude (µV)",
+       color = "PRMQ1 Scores") 
+
+print(plot)
+
+ggsave("PRMQ*PHQ9_N300", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+       
+```
+
+
+### Interaction of JOL and PHQ9 on N300
+```{r}
+library(jtools)
+library(rlang)
+library(interactions)
+
+fitInt <- lm(N300 ~ PHQ9_c * JOL_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  PHQ9_c,
+  JOL_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+
+## Graph
+```{r}
+library(interactions)
+library(ggplot2)
+
+fitInt <- lm(N300 ~ PHQ9_c * JOL_c + Gender1 + Age, data = PMD)
+
+plot <- interact_plot(fitInt, pred = PHQ9_c, modx = JOL_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+
+
+# Customize the axis titles
+plot <- plot + 
+  labs(x = "PHQ-9 Scores",  
+       y = "N300 Amplitude (µV)",
+       color = "Performance Prediction") 
+
+print(plot)
+
+ggsave("JOL*PHQ9_N300", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+       
+```
+
+
+# Effect sizes------------------------------------------------------------------
+
+## Partial R-squared for PHQ9 on PRMQ1
+```{r}
+#full linear regression model
+full_model <- lm(PRMQ1 ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PRMQ1 ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9 on Confidence
+```{r}
+#full linear regression model
+full_model <- lm(Confidence ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Confidence ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9 on JOL
+```{r}
+#full linear regression model
+full_model <- lm(JOL ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(JOL ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD on PRMQ1
+```{r}
+#full linear regression model
+full_model <- lm(PRMQ1 ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PRMQ1 ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD on Confidence
+```{r}
+#full linear regression model
+full_model <- lm(Confidence ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Confidence ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+
+## Partial R-squared for CESD on JOL
+```{r}
+#full linear regression model
+full_model <- lm(JOL ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(JOL ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+
+## Partial R-squared for PHQ9 on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9 on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+
+## Partial R-squared for CESD on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD_c*JOL on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ CESD_c*JOL_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ CESD_c + JOL_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Interactions: PP
+## Partial R-squared for PHQ9*PRMQ1 on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ PHQ9_c*PRMQ1_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ PHQ9_c + PRMQ1_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9*Confidence on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ PHQ9_c*Confidence_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ PHQ9_c + Confidence_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9*JOL on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ PHQ9_c*JOL_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ PHQ9_c + JOL_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD*PRMQ1 on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ CESD_c*PRMQ1_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ CESD_c + PRMQ1_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD_c*Confidence on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ CESD_c*Confidence_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ CESD_c + Confidence_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD_c*JOL on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ CESD_c*JOL_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ CESD_c + JOL_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Interaction: N300
+## Partial R-squared for PHQ9*PRMQ1 on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ PHQ9_c*PRMQ1_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ PHQ9_c + PRMQ1_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9*Confidence on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ PHQ9_c*Confidence_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ PHQ9_c + Confidence_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PHQ9*JOL on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ PHQ9_c*JOL_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ PHQ9_c + JOL_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD*PRMQ1 on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ CESD_c*PRMQ1_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ CESD_c + PRMQ1_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+
+## Partial R-squared for CESD*Confidence on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ CESD_c*Confidence_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ CESD_c + Confidence_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for CESD_c*JOL on N300
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ CESD_c*JOL_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ CESD_c + JOL_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+# Graphs of main effects
+## Make a scatterplot: Depression (PHQ9) & PRMQ
+```{r}
+p <- ggplot(PMD, aes(x = PHQ9, y = PRMQ1)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Depression (PHQ-9)") + ylab("Poor PM Beliefs") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("PHQ9_PRMQ", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+```
+
+## Make a scatterplot: Depression (PHQ9) & Confidence
+```{r}
+p <- ggplot(PMD, aes(x = PHQ9, y = Confidence)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Depression (PHQ-9)") + ylab("Poor Cognitive Confidence") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("PHQ9_Confidence", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+```
+
+## Make a scatterplot: Depression (CESD) & PRMQ
+```{r}
+p <- ggplot(PMD, aes(x = CESD, y = PRMQ1)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Depression (CES-D)") + ylab("Poor PM Beliefs") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("CESD_PRMQ", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+```
+
+## Make a scatterplot: Depression (PHQ9) & Confidence
+```{r}
+p <- ggplot(PMD, aes(x = CESD, y = Confidence)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Depression (CES-D)") + ylab("Poor Cognitive Confidence") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("CESD_Confidence", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+```
+
+# Extra graph info 
+
+```{r}
+## A more complicated graph 
+# Create a new dataset for predictions
+pred_data <- expand.grid(
+  PHQ9_c = seq(min(PMD$PHQ9_c), max(PMD$PHQ9_c), length.out = 100), # Range of PHQ9_c
+  PRMQ1_c = c(mean(PMD$PRMQ1_c) - sd(PMD$PRMQ1_c),  # One standard deviation below the mean
+              mean(PMD$PRMQ1_c),                    # Mean
+              mean(PMD$PRMQ1_c) + sd(PMD$PRMQ1_c))  # One standard deviation above the mean
+)
+
+# Predict N300 for the new dataset using the model
+pred_data$N300_pred <- predict(lm(N300 ~ PHQ9_c * PRMQ1_c + PHQ9_c + PRMQ1_c, data = PMD), newdata = pred_data)
+
+# Convert PRMQ1_c to a factor for plotting
+pred_data$PRMQ1_c <- factor(pred_data$PRMQ1_c, labels = c("Low PRMQ1", "Mean PRMQ1", "High PRMQ1"))
+
+# Create the plot
+ggplot(pred_data, aes(x = PHQ9_c, y = N300_pred, color = PRMQ1_c)) +
+  geom_line(size = 1.2) +
+  labs(title = "Interaction Effect of PHQ9_c and PRMQ1_c on N300",
+       x = "PHQ9_c (Depression Score)",
+       y = "Predicted N300",
+       color = "PRMQ1_c") +
+  theme_minimal() +
+  theme(legend.position = "top") +
+  scale_color_manual(values = c("blue", "orange", "green"))  # Customize colors if desired
+
+```
+
+# Exploratory Interaction: Depression and ERPs on metamemory---------------------
+
+## PRMQ1
+```{r}
+fit <- lm(PRMQ1 ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(PRMQ1 ~ PHQ9_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(PRMQ1 ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(PRMQ1 ~ CESD_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+```
+
+## Confidence
+```{r}
+fit <- lm(Confidence ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(Confidence ~ PHQ9_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(Confidence ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(Confidence ~ CESD_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+```
+
+## JOL
+```{r}
+fit <- lm(JOL ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(JOL ~ PHQ9_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(JOL ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(JOL ~ CESD_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+```
+
+### Interaction of N300 and PHQ9 on PRMQ
+```{r}
+library(jtools)
+library(rlang)
+
+fitInt <- lm(PRMQ1 ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  PHQ9_c,
+  N300_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+
+```{r}
+library(interactions)
+library(ggplot2)
+
+fitInt <- lm(PRMQ1 ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+
+interact_plot(fitInt, pred = PHQ9_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+```
+
+### Interaction of N300 and PHQ9 on JOL
+```{r}
+library(jtools)
+library(rlang)
+
+fitInt <- lm(JOL ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  PHQ9_c,
+  N300_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+
+```{r}
+library(interactions)
+library(ggplot2)
+
+fitInt <- lm(JOL ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+
+interact_plot(fitInt, pred = PHQ9_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+```
+
+
+# Sensitivity analyses----------------------------------------------------------
+
+## SES
+
+# Averaging SES
+```{r}
+PMD$pared1 <- as.numeric(as.character(PMD$pared1))
+PMD$pared2 <- as.numeric(as.character(PMD$pared2))
+
+PMD <- PMD %>%
+  mutate(avgpared = rowMeans(select(., pared1, pared2), na.rm = TRUE))
+
+# View the updated dataframe
+print(PMD)
+
+describe(PMD)
+
+```
+
+## Extra variables in the regression models
+```{r}
+library(openxlsx)
+
+# List of dependent variables
+dependent_vars <- c('PRMQ1', 'Confidence', 'JOL', 'PP', 'N300')
+
+# Independent variables to be tested sequentially
+selected_columns <- c('PHQ9', 'CESD')
+
+# List of additional controls
+additional_controls <- list(
+  SES = "PMD$avgpared",       # Socioeconomic status
+  ADHD = "PMD$ADHD",     # ADHD symptoms
+  Motivation = "PMD$Motivation", # motivation score
+  Sleepiness = "PMD$Sleepiness", # Sleepiness score
+  HrsSleep = "PMD$HrsSleep", # Hours of sleep the night before
+  Anxiety = 'STAIS', # state anxiety
+  PositiveAff = 'PosAff', # positive affect
+  NegativeAff = 'NegAff' # negative affect
+)
+
+# Initialize the results dataframe
+results <- data.frame(Dependent_Variable = character(), 
+                      Independent_Variable = character(), 
+                      Control_Variable = character(),
+                      Estimate = numeric(), 
+                      P_Value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Outer loop for dependent variables
+for (dep_var in dependent_vars) {
+  
+  # Inner loop for independent variables (tested sequentially)
+  for (col in selected_columns) {
+    
+    # Loop for additional controls
+    for (control_name in names(additional_controls)) {
+      control_var <- additional_controls[[control_name]]
+      
+      # Construct the formula for each model
+      formula_str <- paste("PMD$", dep_var, " ~ PMD$", col, " + PMD$Gender1 + PMD$Age + ", control_var, sep = "")
+      
+      # Run the linear model
+      lm1 <- lm(as.formula(formula_str), data = PMD)
+      summary_lm1 <- summary(lm1)
+      
+      # Extract estimate and p-value for the variable of interest (col)
+      estimate <- summary_lm1$coefficients[2, 1]  # 2nd row, 1st column (estimate)
+      p_value <- summary_lm1$coefficients[2, 4]   # 2nd row, 4th column (p-value)
+      
+      # Store the result in the results dataframe
+      results <- rbind(results, data.frame(Dependent_Variable = dep_var, 
+                                           Independent_Variable = col, 
+                                           Control_Variable = control_name,
+                                           Estimate = estimate, 
+                                           P_Value = p_value))
+    }
+  }
+}
+
+# Write the results to an Excel file
+write.xlsx(results, file = "/Users/mickey.rice/Desktop/results2.xlsx", rowNames = FALSE)
+```
+
+
+## Extra variables in the interaction models
+```{r}
+library(openxlsx)
+
+# List of dependent variables
+dependent_vars <- c('PP', 'N300')
+
+# List of additional controls
+additional_controls <- list(
+  SES = "PMD$avgpared",       # Socioeconomic status
+  ADHD = "PMD$ADHD",     # ADHD symptoms
+  Motivation = "PMD$Motivation", # motivation score
+  Sleepiness = "PMD$Sleepiness", # Sleepiness score
+  HrsSleep = "PMD$HrsSleep", # Hours of sleep the night before
+  Anxiety = 'STAIS', # state anxiety
+  PositiveAff = 'PosAff', # positive affect
+  NegativeAff = 'NegAff' # negative affect
+)
+
+# Initialize the results dataframe
+results <- data.frame(Dependent_Variable = character(), 
+                      Interaction_Effect = character(),
+                      Control_Variable = character(),
+                      Estimate = numeric(), 
+                      P_Value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Define pairs for interaction terms
+interaction_pairs <- list(
+  c("PRMQ1", "PHQ9"), 
+  c("PRMQ1", "CESD"), 
+  c("Confidence", "PHQ9"), 
+  c("Confidence", "CESD"), 
+  c("JOL", "PHQ9"), 
+  c("JOL", "CESD")
+)
+
+# Outer loop for dependent variables
+for (dep_var in dependent_vars) {
+  
+  # Loop for additional controls
+  for (control_name in names(additional_controls)) {
+    control_var <- additional_controls[[control_name]]
+    
+    # Loop through interaction pairs for interaction effects models
+    for (pair in interaction_pairs) {
+      interaction_var1 <- pair[1]
+      interaction_var2 <- pair[2]
+      
+      # Construct the formula for the model with interaction terms ONLY
+      formula_str_interaction <- paste("PMD$", dep_var, " ~ PMD$", interaction_var1, "* PMD$", interaction_var2, 
+                                       " + PMD$Gender1 + PMD$Age + ", control_var, sep = "")
+      
+      # Run the model with interaction term only
+      lm2 <- lm(as.formula(formula_str_interaction), data = PMD)
+      summary_lm2 <- summary(lm2)
+      
+      # Extract estimate and p-value for the interaction term
+      interaction_term <- paste("PMD$", interaction_var1, ":PMD$", interaction_var2, sep = "")
+      estimate_interaction <- summary_lm2$coefficients[interaction_term, 1]  # Estimate for interaction
+      p_value_interaction <- summary_lm2$coefficients[interaction_term, 4]   # P-value for interaction
+      
+      # Store the interaction model result
+      results <- rbind(results, data.frame(Dependent_Variable = dep_var, 
+                                           Interaction_Effect = paste(interaction_var1, "*", interaction_var2),
+                                           Control_Variable = control_name,
+                                           Estimate = estimate_interaction, 
+                                           P_Value = p_value_interaction))
+    }
+  }
+}
+
+# Write the results to an Excel file
+write.xlsx(results, file = "/Users/mickey.rice/Desktop/results_interactions_only.xlsx", rowNames = FALSE)
+
+```
+
+```{r}
+# Low depression subset
+low_dep <- PMD[PMD$PHQ9 <= 3, ]
+
+describe(low_dep)
+
+# High depression subset
+high_dep <- PMD[PMD$PHQ9 >= 10, ]
+
+describe(high_dep)
+
+# Paired t-test
+t_test_result1 <- t.test(low_dep$Accuracy, low_dep$JOL, paired = TRUE)
+
+# View the result
+print(t_test_result1)
+
+# Paired t-test
+t_test_result2 <- t.test(high_dep$Accuracy, high_dep$JOL, paired = TRUE)
+
+# View the result
+print(t_test_result2)
+
+high_dep_women <- high_dep[high_dep$Gender == "Female", ]
+
+# Paired t-test
+t_test_result3 <- t.test(high_dep_women$Accuracy, high_dep_women$JOL, paired = TRUE)
+print(t_test_result3)
+
+```
+

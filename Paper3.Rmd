@@ -1,0 +1,1196 @@
+---
+title: "Paper 3"
+output: 
+  html_notebook:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+Created by Mickey Rice
+October 7th, 2024
+
+
+# Load Libaries 
+```{r}
+#install.packages("car")
+#install.packages("lsr")
+#install.packages("MBESS")
+
+#library(car)
+#library(lsr)
+#library(MBESS)
+library(psych)
+library(tidyverse)
+library(apaTables)
+```
+
+# Load Data 
+```{r}
+PMD <- read_csv("PMD.csv")
+```
+
+
+# Recode variables 
+```{r}
+
+PMD$Sex1<- 0
+PMD$Sex1<-ifelse(PMD$Gender=="Male",-1, 1)
+
+
+PMD$Gender1<- 0
+PMD$Gender1<-ifelse(PMD$Gender=="Male", 0, 
+                    ifelse(PMD$Gender=="Female", 1, 2))
+
+## Explaining code : PM$Gender1<- 0 creates the new variable titled Gender1 
+## PM$Gender1<-ifelse(PM$Gender ==“Male”,0 , ifelse(PM$Gender=="Female", 1, 2))) says “if the Gender is male, they will be 0, if Gender is female, they will be 1, if Gender is anything else it will be 2" 
+
+```
+
+
+
+```{r}
+PMD_Describe <- describe(PMD)
+PMD_Describe
+```
+# Check to see if the missing values are at random or not
+```{r}
+# install.packages("naniar")
+library(naniar)
+
+# Perform MCAR test
+mcar_result <- mcar_test(PMD)
+
+# Display the results
+print(mcar_result)
+```
+
+
+# Missing values
+```{r}
+
+# Replace missing Race values with "Do not wish to respond"
+PMD$Race[is.na(PMD$Race)] <- "Do not wish to respond"
+
+PMD_Describe <- describe(PMD)
+PMD_Describe
+```
+
+# Correlation tables
+```{r}
+library(apaTables)
+
+# for Paper 3
+desctable3 <- select(PMD, Accuracy, RT, PP, N300, PRMQ1, Confidence, JOL, PHQ9, CESD, Age, Gender1)
+
+apa.cor.table(
+      desctable3,
+      filename = "desctablePaper3.doc",
+      table.number = 2,
+      show.conf.interval = TRUE,
+      show.sig.stars = TRUE,
+      landscape = TRUE
+)
+
+#zero order correlation table 
+desctable2 <- select(PMD, Accuracy, RT, PP, N300, PRMQ1, Confidence, JOL, Motivation, ADHD, HrsSleep, Sleepiness, PosAff, NegAff, STAIS)
+
+apa.cor.table(
+      desctable2,
+      filename = "desctable2Paper3.doc",
+      table.number = 1,
+      show.conf.interval = TRUE,
+      show.sig.stars = TRUE,
+      landscape = TRUE
+)
+
+```
+
+```{r}
+# Gender
+
+# Recode for point biserial correlations
+PMD$GenderNew<- 0
+
+PMD$GenderNew<-ifelse(PMD$Gender=="Male", "Man", 
+                    ifelse(PMD$Gender=="Female", "Woman", "Trans"))
+
+# df1: Man = 0, Woman = 1. 
+df1 <- PMD[PMD$GenderNew %in% c("Man", "Woman"), ]
+df1$GenderMW <- ifelse(df1$GenderNew == "Man", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("Accuracy", "RT", "PP", "N300", "PRMQ1", "Confidence", "JOL", "PHQ9", "CESD", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df1$GenderMW, df1[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+
+```
+
+```{r}
+# Recode for point biserial correlations
+# df2: Women = 0, Transgender + nonbinary = 1. 
+df2 <- PMD[PMD$GenderNew %in% c("Woman", "Trans"), ]
+df2$GenderWT <- ifelse(df2$GenderNew == "Woman", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("Accuracy", "RT", "PP", "N300", "PRMQ1", "Confidence", "JOL", "PHQ9", "CESD", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df2$GenderWT, df2[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+```
+
+```{r}
+# Recode for point biserial correlations
+# df3: Men = 0, Transgender + nonbinary = 1.
+df3 <- PMD[PMD$GenderNew %in% c("Man", "Trans"), ]
+df3$GenderMT <- ifelse(df3$GenderNew == "Man", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("Accuracy", "RT", "PP", "N300", "PRMQ1", "Confidence", "JOL", "PHQ9", "CESD", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df3$GenderMT, df3[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+
+```
+
+## Centering the variables for an interaction
+```{r}
+## centering the variable - most important for interaction
+PHQ9 <- PMD$PHQ9
+mean_PHQ9 <- mean(PHQ9)
+PHQ9_c <- PHQ9 - mean_PHQ9
+PMD$PHQ9_c <- PHQ9_c
+
+CESD <- PMD$CESD
+mean_CESD <- mean(CESD)
+CESD_c <- CESD - mean_CESD
+PMD$CESD_c <- CESD_c
+
+DASS <- PMD$DASS
+mean_DASS <- mean(DASS)
+DASS_c <- DASS - mean_DASS
+PMD$DASS_c <- DASS_c
+
+PRMQ1 <- PMD$PRMQ1
+mean_PRMQ1 <- mean(PRMQ1)
+PRMQ1_c <- PRMQ1 - mean_PRMQ1
+PMD$PRMQ1_c <- PRMQ1_c
+
+Confidence <- PMD$Confidence
+mean_Confidence <- mean(Confidence)
+Confidence_c <- Confidence - mean_Confidence
+PMD$Confidence_c <- Confidence_c
+
+JOL <- PMD$JOL
+mean_JOL <- mean(JOL)
+JOL_c <- JOL - mean_JOL
+PMD$JOL_c <- JOL_c
+
+
+N300 <- PMD$N300
+mean_N300 <- mean(N300)
+N300_c <- N300 - mean_N300
+PMD$N300_c <- N300_c
+
+PP <- PMD$PP
+mean_PP <- mean(PP)
+PP_c <- PP - mean_PP
+PMD$PP_c <- PP_c
+
+fitInt <- lm(Accuracy ~ N300_c * PRMQ1_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+# PM$Gender1_f <- as.factor(PM$Gender1)
+
+# contrasts(PM$Gender1_f) <- contr.helmert(n = 3)
+
+```
+
+# Regression main effects-------------------------------------------------------
+
+## Regression: Depression predicting Accuracy controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit1 <- lm(scale(Accuracy) ~ scale(PHQ9)+ Age + Gender1, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(Accuracy) ~ scale(CESD) + Age + Gender1, data = PMD)
+summary(fit2)
+
+# fit3 <- lm(scale(Accuracy) ~ scale(DASS) + Age + Gender1, data = PMD)
+# summary(fit3)
+```
+
+## Regression: Depression predicting RT controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit1 <- lm(scale(RT) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit2)
+
+# fit3 <- lm(scale(RT) ~ scale(DASS) + Gender1 + Age, data = PMD)
+# summary(fit3)
+```
+
+## Regression: N300 predicting Accuracy and RT controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit1 <- lm(scale(Accuracy) ~ scale(N300) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(N300) + Gender1 + Age, data = PMD)
+summary(fit2)
+```
+
+## Regression: PP predicting Accuracy and RT controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit1 <- lm(scale(Accuracy) ~ scale(PP) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(PP) + Gender1 + Age, data = PMD)
+summary(fit2)
+
+```
+
+# Mediation---------------------------------------------------------------------
+
+##Original proposal: PHQ9 for depression, N300 as mediator - doesn't make sense because no b path!
+```{r}
+# PHQ9 -> N300 -> Accuracy
+
+#install.packages("mediation")
+#install.packages("minqa")
+#library(mediation)
+
+model.M <- lm(N300 ~ PHQ9 + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ N300 + PHQ9 + Gender1 + Age, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PHQ9", 
+                              mediator= 'N300', 
+                              boot=TRUE, sims=10000)
+summary(results)
+```
+
+## Exploratory interaction for metamemory as moderatory still!
+### Second stage moderators
+```{r}
+# N300 *PRMQ  accuracy
+lm <- lm(Accuracy ~ N300_c * PRMQ1_c + Age + Gender1, PMD)
+summary(lm)
+
+# N300 * confidence  accuracy
+lm <- lm(Accuracy ~ N300_c * Confidence_c + Age + Gender1, PMD)
+summary(lm)
+
+# N300 * predictions  accuracy
+lm <- lm(Accuracy ~ N300_c * JOL_c + Age + Gender1, PMD)
+summary(lm)
+
+# PP*PRMQ  accuracy
+lm <- lm(Accuracy ~ PP_c * PRMQ1_c + Age + Gender1, PMD)
+summary(lm)
+
+# PP* confidence  accuracy
+lm <- lm(Accuracy ~ PP_c * Confidence_c + Age + Gender1, PMD)
+summary(lm)
+
+# PP * predictions  accuracy
+lm <- lm(Accuracy ~ PP_c * JOL_c + Age + Gender1, PMD)
+summary(lm)
+```
+
+### Direct effect moderator: use in exploratory moderated mediation 
+```{r}
+# N300 * PHQ9  accuracy
+lm <- lm(Accuracy ~ N300_c * PHQ9_c + Age + Gender1, PMD)
+summary(lm)
+
+# N300 * CESD  accuracy
+lm <- lm(Accuracy ~ N300_c * CESD_c + Age + Gender1, PMD)
+summary(lm)
+
+# PP * PHQ9  accuracy
+lm <- lm(Accuracy ~ PP_c * PHQ9_c + Age + Gender1, PMD)
+summary(lm)
+
+# PP * CESD  accuracy
+lm <- lm(Accuracy ~ PP_c * CESD_c + Age + Gender1, PMD)
+summary(lm)
+
+```
+
+## Moderated Mediation Analyses: ERPs as Moderator
+###First Stage Moderation
+```{r}
+# PP on PHQ9 and PRMQ.
+lm <- lm(PRMQ1 ~ PP_c*PHQ9_c + Age + Gender1, PMD)
+summary(lm)
+# N300 on PHQ9 and PRMQ.
+lm <- lm(PRMQ1 ~ N300_c*PHQ9_c + Age + Gender1, PMD)
+summary(lm)
+# PP on CESD and PRMQ. 
+lm <- lm(PRMQ1 ~ PP_c*CESD_c + Age + Gender1, PMD)
+summary(lm)
+# N300 on CESD and PRMQ. 
+lm <- lm(PRMQ1 ~ N300_c*CESD_c + Age + Gender1, PMD)
+summary(lm)
+
+```
+
+
+
+
+## Exploratory mediation!
+
+## PHQ9 for depression, PRMQ1 as mediator (not proposed, but makes sense!)
+```{r}
+# PHQ9 -> PRMQ1 -> Accuracy
+
+#install.packages("mediation")
+#install.packages("minqa")
+#library(mediation)
+
+model.M <- lm(PRMQ1 ~ PHQ9 + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + PHQ9 + Gender1 + Age, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PHQ9", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+
+# Extract standard error 
+se_indirect_c <- sd(results$d0.sims) # Standard error for indirect effect
+se_direct_c <- sd(results$z0.sims)   # Standard error for direct effect
+se_total_c <- sd(results$tau.sims)   # Standard error for total effect
+
+# Display results
+cat("Standard Errors (PHQ9):", "\nIndirect:", se_indirect_c, "\nDirect:", se_direct_c, "\nTotal:", se_total_c, "\n")
+```
+
+## Create APA formatted table
+```{r}
+# Extract effect estimates, confidence intervals, standard errors, and p-values
+indirect_effect <- results$d0
+indirect_ci <- c(results$d0.ci[1], results$d0.ci[2])
+indirect_se <- sd(results$d0.sims)
+indirect_p <- results$d0.p
+
+direct_effect <- results$z0
+direct_ci <- c(results$z0.ci[1], results$z0.ci[2])
+direct_se <- sd(results$z0.sims)
+direct_p <- results$z0.p
+
+total_effect <- results$tau.coef
+total_ci <- c(results$tau.ci[1], results$tau.ci[2])
+total_se <- sd(results$tau.sims)
+total_p <- results$tau.p
+
+# Create data frame with all values
+results_table <- data.frame(
+  Effect = c("Indirect", "Direct", "Total"),
+  Estimate = c(indirect_effect, direct_effect, total_effect),
+  SE = c(indirect_se, direct_se, total_se),
+  `CI Lower` = c(indirect_ci[1], direct_ci[1], total_ci[1]),
+  `CI Upper` = c(indirect_ci[2], direct_ci[2], total_ci[2]),
+  `p-value` = c(indirect_p, direct_p, total_p)
+)
+
+# install.packages("kableExtra")
+# install.packages("officer")
+library(officer)
+library(kableExtra)
+
+# Create APA-style table
+results_table %>%
+  kable("html", caption = "Mediation Analysis Results") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  add_header_above(c(" " = 1, "Estimate" = 1, "Standard Error" = 1, "95% Confidence Interval" = 2, " " = 1)) %>%
+  column_spec(2, bold = TRUE) %>%
+  footnote(general = "Estimates, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.",
+           general_title = "Note: ")
+
+library(officer)
+library(kableExtra)
+
+# Create APA-style table in HTML format
+results_html_table <- results_table %>%
+  kable("html", caption = "Model Results for PHQ-9 Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) while controlling for age and gender") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  add_header_above(c(" " = 1, "Standardized Beta" = 1, "Standard Error" = 1, "95% Confidence Interval" = 2, " " = 1)) %>%
+  column_spec(2, bold = TRUE) %>%
+  footnote(general = "Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.",
+           general_title = "Note: ")
+
+# Create a new Word document
+doc <- read_docx()
+
+# Add the table to the Word document
+doc <- doc %>%
+  body_add_par("Model Results for PHQ-9 Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) while controlling for age and gender", style = "heading 1") %>%
+  body_add_table(value = results_table, style = "table_template") %>%  # You can define a style template in Word if you prefer
+  body_add_par("Note: Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.", style = "Normal")
+
+# Save the document
+print(doc, target = "PHQ9_agegender_Mediation_Analysis_Results.docx")
+
+```
+
+
+
+## CESD for depression, PRMQ1 as mediator 
+```{r}
+# CESD -> PRMQ1 -> Accuracy
+
+#install.packages("mediation")
+#install.packages("minqa")
+#library(mediation)
+
+model.M <- lm(PRMQ1 ~ CESD + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + CESD + Gender1 + Age, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "CESD", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+
+
+```
+
+## Create APA formatted table
+```{r}
+# Extract effect estimates, confidence intervals, standard errors, and p-values
+indirect_effect <- results$d0
+indirect_ci <- c(results$d0.ci[1], results$d0.ci[2])
+indirect_se <- sd(results$d0.sims)
+indirect_p <- results$d0.p
+
+direct_effect <- results$z0
+direct_ci <- c(results$z0.ci[1], results$z0.ci[2])
+direct_se <- sd(results$z0.sims)
+direct_p <- results$z0.p
+
+total_effect <- results$tau.coef
+total_ci <- c(results$tau.ci[1], results$tau.ci[2])
+total_se <- sd(results$tau.sims)
+total_p <- results$tau.p
+
+# Create data frame with all values
+results_table <- data.frame(
+  Effect = c("Indirect", "Direct", "Total"),
+  Estimate = c(indirect_effect, direct_effect, total_effect),
+  SE = c(indirect_se, direct_se, total_se),
+  `CI Lower` = c(indirect_ci[1], direct_ci[1], total_ci[1]),
+  `CI Upper` = c(indirect_ci[2], direct_ci[2], total_ci[2]),
+  `p-value` = c(indirect_p, direct_p, total_p)
+)
+
+# install.packages("kableExtra")
+# install.packages("officer")
+library(officer)
+library(kableExtra)
+
+# Create APA-style table
+results_table %>%
+  kable("html", caption = "Mediation Analysis Results") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  add_header_above(c(" " = 1, "Estimate" = 1, "Standard Error" = 1, "95% Confidence Interval" = 2, " " = 1)) %>%
+  column_spec(2, bold = TRUE) %>%
+  footnote(general = "Estimates, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.",
+           general_title = "Note: ")
+
+library(officer)
+library(kableExtra)
+
+# Create APA-style table in HTML format
+results_html_table <- results_table %>%
+  kable("html", caption = "Model Results for CES-D Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) while controlling for age and gender") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  add_header_above(c(" " = 1, "Standardized Beta" = 1, "Standard Error" = 1, "95% Confidence Interval" = 2, " " = 1)) %>%
+  column_spec(2, bold = TRUE) %>%
+  footnote(general = "Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.",
+           general_title = "Note: ")
+
+# Create a new Word document
+doc <- read_docx()
+
+# Add the table to the Word document
+doc <- doc %>%
+  body_add_par("Model Results for CES-D Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) while controlling for age and gender", style = "heading 1") %>%
+  body_add_table(value = results_table, style = "table_template") %>%  # You can define a style template in Word if you prefer
+  body_add_par("Note: Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.", style = "Normal")
+
+# Save the document
+print(doc, target = "CESD_agegender_Mediation_Analysis_Results.docx")
+
+```
+
+# Moderated Mediation (mediate package)-----------------------------------------
+
+## Original proposal: Using the mediate package: PHQ9 for depression, N300 as mediator, PRMQ1 as moderator
+```{r}
+# PHQ9 -> N300 (PRMQ1 moderator) -> Accuracy
+
+#install.packages("mediation")
+#install.packages("minqa")
+#library(mediation)
+
+model.M <- lm(N300 ~ PHQ9_c * PRMQ1_c + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ N300 + PHQ9_c + Gender1 + Age, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PHQ9_c", 
+                              mediator= 'N300', 
+                              boot=TRUE, sims=10000)
+summary(results)
+```
+
+## Exploratory moderated mediation!
+
+## Using the mediate package: PHQ9 as depression, PRMQ1 mediator, N300 moderator on c' path
+```{r}
+# Depression -> PRMQ1 (N300 moderator) -> Accuracy
+## N300 as moderator on the A path
+
+#install.packages("mediation")
+#install.packages("minqa")
+library(mediation)
+
+c <- lm(Accuracy ~ PHQ9 + Gender1 + Age, data = PMD)
+summary(c)
+
+a <- lm(PRMQ1 ~ PHQ9 + Gender1 + Age, data = PMD)
+summary(a)
+
+b <- lm(Accuracy ~ PRMQ1 + Gender1 + Age, data = PMD)
+summary(b)
+
+model.M <- lm(PRMQ1 ~ PHQ9_c + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + PHQ9_c * N300_c + Gender1 + Age + Gender1, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PHQ9_c", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+
+```
+## Create APA formatted table
+```{r}
+# Extract effect estimates, confidence intervals, standard errors, and p-values
+indirect_effect <- results$d0
+indirect_ci <- c(results$d0.ci[1], results$d0.ci[2])
+indirect_se <- sd(results$d0.sims)
+indirect_p <- results$d0.p
+
+direct_effect <- results$z0
+direct_ci <- c(results$z0.ci[1], results$z0.ci[2])
+direct_se <- sd(results$z0.sims)
+direct_p <- results$z0.p
+
+total_effect <- results$tau.coef
+total_ci <- c(results$tau.ci[1], results$tau.ci[2])
+total_se <- sd(results$tau.sims)
+total_p <- results$tau.p
+
+# Create data frame with all values
+results_table <- data.frame(
+  Effect = c("Indirect", "Direct", "Total"),
+  Estimate = c(indirect_effect, direct_effect, total_effect),
+  SE = c(indirect_se, direct_se, total_se),
+  `CI Lower` = c(indirect_ci[1], direct_ci[1], total_ci[1]),
+  `CI Upper` = c(indirect_ci[2], direct_ci[2], total_ci[2]),
+  `p-value` = c(indirect_p, direct_p, total_p)
+)
+
+# install.packages("kableExtra")
+# install.packages("officer")
+
+library(officer)
+library(kableExtra)
+
+# Create APA-style table in HTML format
+results_html_table <- results_table %>%
+  kable("html", caption = "Model Results for PHQ-9 Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) with Cue Detection as a Moderator while controlling for age and gender") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  add_header_above(c(" " = 1, "Standardized Beta" = 1, "Standard Error" = 1, "95% Confidence Interval" = 2, " " = 1)) %>%
+  column_spec(2, bold = TRUE) %>%
+  footnote(general = "Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.",
+           general_title = "Note: ")
+
+# Create a new Word document
+doc <- read_docx()
+
+# Add the table to the Word document
+doc <- doc %>%
+  body_add_par("Model Results for PHQ-9 Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) with Cue Detection as a Moderator while controlling for age and gender", style = "heading 1") %>%
+  body_add_table(value = results_table, style = "table_template") %>%  # You can define a style template in Word if you prefer
+  body_add_par("Note: Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.", style = "Normal")
+
+# Save the document
+print(doc, target = "PHQ9_agegender_ModMediation_Analysis_Results.docx")
+
+```
+
+
+### Check conditional indirect effects: PHQ-9
+```{r}
+# Define values for the moderator (W) at mean, mean + 1 SD, and mean - 1 SD
+mean_W <- mean(PMD$N300_c, na.rm = TRUE)
+sd_W <- sd(PMD$N300_c, na.rm = TRUE)
+
+W_levels <- c(mean_W, mean_W + sd_W, mean_W - sd_W)
+
+# List to store results for each level of W
+results <- list()
+
+for (i in 1:length(W_levels)) {
+  # Create a copy of the data with N300_c set to the specific level
+  PMD_subset <- PMD
+  PMD_subset$N300_c <- W_levels[i]
+  
+  # Define the mediator and outcome models
+  mediator_model <- lm(PRMQ1 ~ PHQ9_c + Gender1, data = PMD_subset)
+  outcome_model <- lm(Accuracy ~ PRMQ1 + PHQ9_c * N300_c + Gender1, data = PMD_subset)
+  
+  # Run the mediation analysis
+  mediation_results <- mediation::mediate(mediator_model, 
+                               outcome_model, 
+                               treat = "PHQ9_c", 
+                               mediator = "PRMQ1", 
+                               boot = TRUE, sims = 10000)
+  
+  # Store the mediation results for each level
+  results[[paste0("N300_c_", i)]] <- summary(mediation_results)
+}
+
+# Display the results for each level of W
+results
+
+```
+### Check conditional indirect effects: CES-D
+```{r}
+# Define values for the moderator (W) at mean, mean + 1 SD, and mean - 1 SD
+mean_W <- mean(PMD$N300_c, na.rm = TRUE)
+sd_W <- sd(PMD$N300_c, na.rm = TRUE)
+
+W_levels <- c(mean_W, mean_W + sd_W, mean_W - sd_W)
+
+# List to store results for each level of W
+results <- list()
+
+for (i in 1:length(W_levels)) {
+  # Create a copy of the data with N300_c set to the specific level
+  PMD_subset <- PMD
+  PMD_subset$N300_c <- W_levels[i]
+  
+  # Define the mediator and outcome models
+  mediator_model <- lm(PRMQ1 ~ CESD_c + Gender1, data = PMD_subset)
+  outcome_model <- lm(Accuracy ~ PRMQ1 + CESD_c * N300_c + Gender1, data = PMD_subset)
+  
+  # Run the mediation analysis
+  mediation_results <- mediation::mediate(mediator_model, 
+                               outcome_model, 
+                               treat = "CESD_c", 
+                               mediator = "PRMQ1", 
+                               boot = TRUE, sims = 10000)
+  
+  # Store the mediation results for each level
+  results[[paste0("N300_c_", i)]] <- summary(mediation_results)
+}
+
+# Display the results for each level of W
+results
+```
+
+## Using the mediate package: CESD as depression, PRMQ1 mediator, N300 moderator on c' path
+```{r}
+c <- lm(Accuracy ~ CESD + Gender1 + Age, data = PMD)
+summary(c)
+
+a <- lm(PRMQ1 ~ CESD + Gender1 + Age, data = PMD)
+summary(a)
+
+b <- lm(Accuracy ~ PRMQ1 + Gender1 + Age, data = PMD)
+summary(b)
+
+model.M <- lm(PRMQ1 ~ CESD_c + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + CESD_c * N300_c + Gender1 + Age, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "CESD_c", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+```
+
+```{r}
+# Extract effect estimates, confidence intervals, standard errors, and p-values
+indirect_effect <- results$d0
+indirect_ci <- c(results$d0.ci[1], results$d0.ci[2])
+indirect_se <- sd(results$d0.sims)
+indirect_p <- results$d0.p
+
+direct_effect <- results$z0
+direct_ci <- c(results$z0.ci[1], results$z0.ci[2])
+direct_se <- sd(results$z0.sims)
+direct_p <- results$z0.p
+
+total_effect <- results$tau.coef
+total_ci <- c(results$tau.ci[1], results$tau.ci[2])
+total_se <- sd(results$tau.sims)
+total_p <- results$tau.p
+
+# Create data frame with all values
+results_table <- data.frame(
+  Effect = c("Indirect", "Direct", "Total"),
+  Estimate = c(indirect_effect, direct_effect, total_effect),
+  SE = c(indirect_se, direct_se, total_se),
+  `CI Lower` = c(indirect_ci[1], direct_ci[1], total_ci[1]),
+  `CI Upper` = c(indirect_ci[2], direct_ci[2], total_ci[2]),
+  `p-value` = c(indirect_p, direct_p, total_p)
+)
+
+# install.packages("kableExtra")
+# install.packages("officer")
+
+library(officer)
+library(kableExtra)
+
+# Create APA-style table in HTML format
+results_html_table <- results_table %>%
+  kable("html", caption = "Model Results for CES-D Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) with Cue Detection as a Moderator while controlling for age and gender") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  add_header_above(c(" " = 1, "Standardized Beta" = 1, "Standard Error" = 1, "95% Confidence Interval" = 2, " " = 1)) %>%
+  column_spec(2, bold = TRUE) %>%
+  footnote(general = "Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.",
+           general_title = "Note: ")
+
+# Create a new Word document
+doc <- read_docx()
+
+# Add the table to the Word document
+doc <- doc %>%
+  body_add_par("Model Results for CES-D Relating to PM Accuracy via PM-related Metamemory  Beliefs (PRMQ) with Cue Detection as a Moderator while controlling for age and gender", style = "heading 1") %>%
+  body_add_table(value = results_table, style = "table_template") %>%  # You can define a style template in Word if you prefer
+  body_add_par("Note: Standardized Betas, standard errors, confidence intervals, and p-values for the indirect, direct, and total effects.", style = "Normal")
+
+# Save the document
+print(doc, target = "CESD_agegender_ModMediation_Analysis_Results.docx")
+
+```
+
+
+
+
+## Graph to understand N300 as a moderator on a path 
+```{r}
+
+fitInt1 <- lm(PRMQ1 ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+
+interact_plot(fitInt1, pred = PHQ9_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+
+```
+
+```{r}
+model <- lm(Accuracy ~ PP + Gender1 + Age, data = PMD)
+summary(model)
+```
+
+
+## New exploratory idea: N300 as moderator for accuracy (c' path)?------------------------------------------
+
+### quick detour - I run N300 as a moderator for PHQ9 and accuracy.
+```{r}
+fit <- lm(Accuracy ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+```
+
+### simple slopes
+```{r}
+library(jtools)
+library(rlang)
+library(interactions)
+
+fitInt <- lm(Accuracy ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  PHQ9_c,
+  N300_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+### graph to understand how the N300 modated PHQ9 and accuracy (c' path)
+```{r}
+library(ggplot2)
+
+fitInt <- lm(Accuracy ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+
+interact_plot(fitInt, pred = PHQ9_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+```
+
+## Checking other interactions
+##N300 as a moderator for CESD and accuracy.
+```{r}
+fit <- lm(Accuracy ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(Accuracy ~ PHQ9_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+
+fit <- lm(Accuracy ~ CESD_c * PP_c + Gender1 + Age, data = PMD)
+summary(fit)
+```
+### simple slopes
+```{r}
+library(jtools)
+library(rlang)
+library(interactions)
+
+fitInt <- lm(Accuracy ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  CESD_c,
+  N300_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+
+### graph to understand how the N300 modated CESD-D and accuracy (c' path)
+```{r}
+library(ggplot2)
+
+fitInt <- lm(Accuracy ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+
+interact_plot(fitInt, pred = CESD_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       # Change colors if you prefer different ones
+```
+
+# Effects sizes
+
+## Main effects
+### Partial R-squared for PHQ9 on Accuracy
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for CESD on Accuracy
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for PHQ9 on RT
+```{r}
+#full linear regression model
+full_model <- lm(RT ~ PHQ9 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(RT ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for CESD on RT
+```{r}
+#full linear regression model
+full_model <- lm(RT ~ CESD + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(RT ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for PP on RT
+```{r}
+#full linear regression model
+full_model <- lm(RT ~ PP + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(RT ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for N300 on RT
+```{r}
+#full linear regression model
+full_model <- lm(RT ~ N300 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(RT ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for PP on Accuracy
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ PP + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Partial R-squared for N300 on Accuracy
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ N300 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Interactions
+### Accuracy ~ PHQ9_c*N300_c
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ PHQ9_c*N300_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ PHQ9_c + N300_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+### Accuracy ~ CESD_c*N300_c
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ CESD_c*N300_c + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ CESD_c + N300_c + Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## New exploratory idea: PP as moderator for accuracy (b path)?------------------------------------------
+
+### quick detour - I run PP as a moderator for metamemory and accuracy.
+```{r}
+model <- lm(Accuracy ~ PP_c*PRMQ1_c + Gender1 + Age, data = PMD)
+summary(model)
+```
+
+## Metamemory as mediatior in relationship bw PP and accuracy
+```{r}
+# PP -> PRMQ1 -> Accuracy
+
+#install.packages("mediation")
+#install.packages("minqa")
+#library(mediation)
+
+model.M <- lm(PRMQ1 ~ PP + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + PP + Gender1 + Age, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PP", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+```
+## New exploratory idea: PP as moderator for accuracy (c' path)?------------------------------------------
+
+### quick detour - I run PP as a moderator for metamemory and accuracy.
+```{r}
+model <- lm(Accuracy ~ PP_c * PHQ9_c + Gender1 + Age, data = PMD)
+summary(model)
+```
+# Per Deana's request: isolate how N300 and PP look for PM in normal population and depressed populations
+```{r}
+
+# Low depression subset
+low_dep <- PMD[PMD$PHQ9 <= 3, ]
+
+# High depression subset
+high_dep <- PMD[PMD$PHQ9 >= 10, ]
+
+# Check the results
+describe(low_dep)
+
+describe(high_dep)
+
+# N300 and accuracy in low depression
+model <- lm(Accuracy ~ scale(N300) + Age + Gender1, data = low_dep)
+summary(model)
+
+# PP and accuracy in low depression
+model1 <- lm(Accuracy ~ scale(PP) + Age + Gender1, data = low_dep)
+summary(model1)
+
+# N300 and accuracy in high depression
+model2 <- lm(Accuracy ~ scale(N300) + Age + Gender1, data = high_dep)
+summary(model2)
+
+# PP and accuracy in high depression
+model3 <- lm(Accuracy ~ scale(PP) + Age + Gender1, data = high_dep)
+summary(model3)
+
+model4 <- lm(Accuracy ~ scale(PP) + Age + Gender1, data = PMD)
+summary(model4)
+
+model5 <- lm(Accuracy ~ scale(N300) + Age + Gender1, data = PMD)
+summary(model5)
+
+```
+```{r}
+ # Paired t-test
+t_test_result <- t.test(high_dep$N300, low_dep$N300, paired = FALSE)
+
+# View the result
+print(t_test_result)
+```
+
+
+

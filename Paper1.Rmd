@@ -1,0 +1,873 @@
+---
+title: "Paper 1"
+output: 
+  html_notebook:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+Created by Mickey Rice
+October 8th, 2024
+
+# Load Libaries 
+```{r}
+library(psych)
+library(dplyr)
+library(tidyverse)
+library(apaTables)
+library(ggplot2)
+
+```
+
+# Load Data 
+```{r}
+PMD <- read_csv("PMD.csv")
+```
+
+# Recode variables 
+```{r}
+
+PMD$Sex1<- 0
+PMD$Sex1<-ifelse(PMD$Gender=="Male",-1, 1)
+
+
+PMD$Gender1<- 0
+PMD$Gender1<-ifelse(PMD$Gender=="Male", 0, 
+                    ifelse(PMD$Gender=="Female", 1, 2))
+
+## Explaining code : PM$Gender1<- 0 creates the new variable titled Gender1 
+## PM$Gender1<-ifelse(PM$Gender ==“Male”,0 , ifelse(PM$Gender=="Female", 1, 2))) says “if the Gender is male, they will be 0, if Gender is female, they will be 1, if Gender is anything else it will be 2" 
+
+
+
+
+# Gender1: Man = 0, Woman = 1. 
+# Gender2: Women = 0, Transgender + nonbinary = 1. 
+# Gender3: Men = 0, Transgender + nonbinary = 1.
+
+```
+
+
+```{r}
+print(PMD)
+
+describe(PMD)
+```
+
+# Print correlation tables
+```{r}
+
+#zero order correlation table 
+desctable1 <- select(PMD, Accuracy, RT, PP, N300, PRMQ1, Confidence, JOL, Age, Gender1)
+
+apa.cor.table(
+      desctable1,
+      filename = "desctablePaper1.doc",
+      table.number = 1,
+      show.conf.interval = TRUE,
+      show.sig.stars = TRUE
+)
+
+#zero order correlation table 
+desctable2 <- select(PMD, Accuracy, RT, PP, N300, PRMQ1, Confidence, JOL, Motivation, ADHD, HrsSleep, Sleepiness, Age, Gender1)
+
+apa.cor.table(
+      desctable2,
+      filename = "desctable2Paper1.doc",
+      table.number = 1,
+      show.conf.interval = TRUE,
+      show.sig.stars = TRUE,
+      landscape = TRUE
+)
+```
+
+# Sample info
+
+```{r}
+PMD %>%
+  count(Gender)
+
+PMD %>%
+  count(Race)
+
+PMD %>%
+  count(Ethnicity)
+
+PMD %>%
+  count(Handedness)
+
+describe(PMD$PRMQ1)
+
+describe(PMD$Confidence)
+
+describe(PMD$JOL)
+
+describe(PMD$Accuracy)
+
+describe(PMD$RT)
+2093.87 - 282.68
+
+describe(PMD$Motivation)
+204 - 84
+
+describe(PMD$ADHD)
+
+describe(PMD$HrsSleep)
+
+describe(PMD$Sleepiness)
+```
+
+# Regression of control variables on PMD variables
+
+## Gender
+```{r}
+
+model <- lm(PRMQ1 ~ Gender1, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ Gender1, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ Gender1, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ Gender1, data = PMD)
+summary(model)
+
+model <- lm(RT ~ Gender1, data = PMD)
+summary(model)
+
+model <- lm(PP ~ Gender1, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ Gender1, data = PMD)
+summary(model)
+```
+
+## Age
+```{r}
+model <- lm(PRMQ1 ~ Age, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ Age, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ Age, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ Age, data = PMD)
+summary(model)
+
+model <- lm(RT ~ Age, data = PMD)
+summary(model)
+
+model <- lm(PP ~ Age, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ Age, data = PMD)
+summary(model)
+```
+
+# Correlations: Gender and age with variables
+```{r}
+# Gender
+
+# Recode for point biserial correlations
+PMD$GenderNew<- 0
+
+PMD$GenderNew<-ifelse(PMD$Gender=="Male", "Man", 
+                    ifelse(PMD$Gender=="Female", "Woman", "Trans"))
+
+# df1: Man = 0, Woman = 1. 
+df1 <- PMD[PMD$GenderNew %in% c("Man", "Woman"), ]
+df1$GenderMW <- ifelse(df1$GenderNew == "Man", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("Accuracy", "RT", "PP", "N300", "PRMQ1", "Confidence", "JOL", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df1$GenderMW, df1[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+
+```
+
+```{r}
+# Recode for point biserial correlations
+# df2: Women = 0, Transgender + nonbinary = 1. 
+df2 <- PMD[PMD$GenderNew %in% c("Woman", "Trans"), ]
+df2$GenderWT <- ifelse(df2$GenderNew == "Woman", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("Accuracy", "RT", "PP", "N300", "PRMQ1", "Confidence", "JOL", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df2$GenderWT, df2[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+```
+
+```{r}
+# Recode for point biserial correlations
+# df3: Men = 0, Transgender + nonbinary = 1.
+df3 <- PMD[PMD$GenderNew %in% c("Man", "Trans"), ]
+df3$GenderMT <- ifelse(df3$GenderNew == "Man", 0, 1)
+
+
+# Loop through all the correlations!
+dependent_vars <- c("Accuracy", "RT", "PP", "N300", "PRMQ1", "Confidence", "JOL", "Age")
+
+# Initialize a list to store results
+results <- list()
+
+# Loop through each dependent variable
+for (var in dependent_vars) {
+    # Perform the correlation test
+    correlation_result <- cor.test(df3$GenderMT, df3[[var]], method = "pearson")
+    
+    # Store the results in the list
+    results[[var]] <- correlation_result
+}
+
+# Print the results
+for (var in dependent_vars) {
+    print(paste("Correlation results for:", var))
+    print(results[[var]])
+}
+
+```
+
+# Regression: Metamemtory predicting Accuracy controlling for age and gender
+```{r}
+# scale = standardizing the coefficients 
+
+fit4 <- lm(scale(Accuracy) ~ scale(PRMQ1) + Age + Gender1, data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(Accuracy) ~ scale(Confidence) + Age + Gender1, data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(Accuracy) ~ scale(JOL) + Age + Gender1, data = PMD)
+summary(fit6)
+
+```
+
+# Regression: Metamemtory predicting RT controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(RT) ~ scale(PRMQ1) + Gender1 + Age, data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(RT) ~ scale(Confidence) + Gender1 + Age, data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(RT) ~ scale(JOL) + Gender1 + Age, data = PMD)
+summary(fit6)
+```
+
+# Regression: Metamemtory predicting N300 controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(N300) ~ scale(PRMQ1) + Gender1 + Age, data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(N300) ~ scale(Confidence) + Gender1 + Age, data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(N300) ~ scale(JOL) + Gender1 + Age, data = PMD)
+summary(fit6)
+```
+
+# Regression: Metamemtory predicting PP controlling for age and gender
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(PP) ~ scale(PRMQ1) + Gender1 + Age, data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(PP) ~ scale(Confidence) + Gender1 + Age, data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(PP) ~ scale(JOL) + Gender1 + Age, data = PMD)
+summary(fit6)
+```
+
+# Effect sizes 
+## Partial R-squared for PRMQ1 on Accuracy
+```{r}
+#full linear regression model
+full_model <- lm(Accuracy ~ PRMQ1 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(Accuracy ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for Confidence on RT
+```{r}
+#full linear regression model
+full_model <- lm(RT ~ Confidence + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(RT ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for JOL on RT
+```{r}
+#full linear regression model
+full_model <- lm(RT ~ JOL + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(RT ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for PRMQ1 on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ PRMQ1 + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Partial R-squared for Confidence on PP
+```{r}
+#full linear regression model
+full_model <- lm(PP ~ Confidence + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(PP ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+```
+
+## Non significant effect sizes
+```{r}
+#full linear regression model
+full_model <- lm(N300 ~ JOL + Age + Gender1, data = PMD)
+# model without the predictor
+reduced_model <- lm(N300 ~ Age + Gender1, data = PMD)
+# R-squared for the full model
+r_squared_full <- summary(full_model)$r.squared
+# R-squared for the reduced model
+r_squared_reduced <- summary(reduced_model)$r.squared
+# Partial R-squared for STAIS while controlling for Age and Gender!!!
+partial_r_squared <- r_squared_full - r_squared_reduced
+print(partial_r_squared)
+
+```
+
+
+# Exploratory
+## SES
+
+# Averaging SES
+```{r}
+PMD$pared1 <- as.numeric(as.character(PMD$pared1))
+PMD$pared2 <- as.numeric(as.character(PMD$pared2))
+
+PMD <- PMD %>%
+  mutate(avgpared = rowMeans(select(., pared1, pared2), na.rm = TRUE))
+
+# View the updated dataframe
+print(PMD)
+
+describe(PMD)
+
+```
+
+```{r}
+
+model <- lm(PRMQ1 ~ avgpared, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ avgpared, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ avgpared, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ avgpared, data = PMD)
+summary(model)
+
+model <- lm(RT ~ avgpared, data = PMD)
+summary(model)
+
+model <- lm(PP ~ avgpared, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ avgpared, data = PMD)
+summary(model)
+
+```
+
+Hours of sleep
+```{r}
+model <- lm(PRMQ1 ~ HrsSleep, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ HrsSleep, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ HrsSleep, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ HrsSleep, data = PMD)
+summary(model)
+
+model <- lm(RT ~ HrsSleep, data = PMD)
+summary(model)
+
+model <- lm(PP ~ HrsSleep, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ HrsSleep, data = PMD)
+summary(model)
+
+
+```
+
+Sleepiness
+```{r}
+model <- lm(PRMQ1 ~ Sleepiness, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ Sleepiness, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ Sleepiness, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ Sleepiness, data = PMD)
+summary(model)
+
+model <- lm(RT ~ Sleepiness, data = PMD)
+summary(model)
+
+model <- lm(PP ~ Sleepiness, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ Sleepiness, data = PMD)
+summary(model)
+
+```
+
+## Motivation
+```{r}
+
+model <- lm(PRMQ1 ~ Motivation, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ Motivation, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ Motivation, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ Motivation, data = PMD)
+summary(model)
+
+model <- lm(RT ~ Motivation, data = PMD)
+summary(model)
+
+model <- lm(PP ~ Motivation, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ Motivation, data = PMD)
+summary(model)
+
+```
+
+## ADHD
+```{r}
+
+model <- lm(PRMQ1 ~ ADHD, data = PMD)
+summary(model)
+
+model <- lm(Confidence ~ ADHD, data = PMD)
+summary(model)
+
+model <- lm(JOL ~ ADHD, data = PMD)
+summary(model)
+
+model <- lm(Accuracy ~ ADHD, data = PMD)
+summary(model)
+
+model <- lm(RT ~ ADHD, data = PMD)
+summary(model)
+
+model <- lm(PP ~ ADHD, data = PMD)
+summary(model)
+
+model <- lm(N300 ~ ADHD, data = PMD)
+summary(model)
+
+```
+
+## Make a scatterplot:Metamemory (PRMQ1) & PM Accuracy
+```{r}
+p <- ggplot(PMD, aes(x = PRMQ1, y = Accuracy)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Self-Evaluation of Prospective Memory Failures") + ylab("Prospective Memory Accuracy") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("PRMQ1_Accuracy", path = '/Users/mickey.rice/Desktop/', bg="white", width = 7, height = 7, device='jpeg', dpi= 700)
+
+```
+
+## Make a scatterplot:Metamemory (PRMQ1) & PP
+```{r}
+p <- ggplot(PMD, aes(x = PRMQ1, y = PP)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Self-Evaluation of Prospective Memory Failures") + ylab("Prospective Positivity (mV)") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("PRMQ1_PP", path = '/Users/mickey.rice/Desktop/', bg="white", width = 7, height = 7, device='jpeg', dpi= 700)
+```
+
+## Make a scatterplot:Metamemory (Confidence) & RT
+```{r}
+p <- ggplot(PMD, aes(x = Confidence, y = RT)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Self-Reports of Poor Cognitive Confidence") + ylab("Reaction Time (ms)") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+
+p
+
+ggsave("Confidence_RT", path = '/Users/mickey.rice/Desktop/', bg="white", width = 7, height = 7, device='jpeg', dpi= 700)
+```
+
+## Make a scatterplot:Metamemory (Confidence) & PP
+```{r}
+ggplot(PMD, aes(x = Confidence, y = PP)) +
+  geom_point() +
+    geom_smooth(method = "lm", color = "dark green") +
+  labs(
+       x="Confidence Score", y = "Prospective Positivity (mV)")+
+  theme_classic()  +
+  theme(text = element_text(size = 18))                    
+```
+
+## Make a scatterplot:Metamemory (JOL) & RT
+```{r}
+p <- ggplot(PMD, aes(x = JOL, y = RT)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Performance Predictions") + ylab("Reaction Time (ms)") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=18),
+        axis.title=element_text(size=18,face="plain"))
+p
+
+ggsave("JOL_RT", path = '/Users/mickey.rice/Desktop/', bg="white", width = 7, height = 7, device='jpeg', dpi= 700)
+```
+
+## Make a scatterplot:Metamemory (JOL) & RT
+```{r}
+p <- ggplot(PMD, aes(x = JOL, y = Accuracy)) +
+  geom_point() +
+    geom_smooth(method = "lm", se=FALSE, fullrange=TRUE, color = "black") + theme_minimal() + scale_color_grey()
+p <- p + ggtitle("") + xlab("Performance Predictions (%)") + ylab("Accuracy (%)") + theme(plot.title = element_text(hjust = 0.5)) + theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=20,face="plain"))
+p
+
+ggsave("JOL_Acc", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+```
+
+# Exploratory: test to see if there is a significant difference between the predicted and actual accuracy
+```{r}
+# Paired t-test
+t_test_result <- t.test(PMD$Accuracy, PMD$JOL, paired = TRUE)
+
+# View the result
+print(t_test_result)
+```
+
+
+# Sensitivity analyses
+```{r}
+library(openxlsx)
+
+# List of dependent variables
+dependent_vars <- c('Accuracy', 'RT', 'PP', 'N300')
+
+# Independent variables to be tested sequentially
+selected_columns <- c('PRMQ1', 'Confidence', 'JOL')
+
+# List of additional controls
+additional_controls <- list(
+  SES = "PMD$avgpared",       # Socioeconomic status
+  ADHD = "PMD$ADHD",     # ADHD symptoms
+  Motivation = "PMD$Motivation", # motivation score
+  Sleepiness = "PMD$Sleepiness", # Sleepiness score
+  HrsSleep = "PMD$HrsSleep" # Hours of sleep the night before
+)
+
+# Initialize the results dataframe
+results <- data.frame(Dependent_Variable = character(), 
+                      Independent_Variable = character(), 
+                      Control_Variable = character(),
+                      Estimate = numeric(), 
+                      P_Value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Outer loop for dependent variables
+for (dep_var in dependent_vars) {
+  
+  # Inner loop for independent variables (tested sequentially)
+  for (col in selected_columns) {
+    
+    # Loop for additional controls
+    for (control_name in names(additional_controls)) {
+      control_var <- additional_controls[[control_name]]
+      
+      # Construct the formula for each model
+      formula_str <- paste("PMD$", dep_var, " ~ PMD$", col, " + PMD$Gender1 + PMD$Age + ", control_var, sep = "")
+      
+      # Run the linear model
+      lm1 <- lm(as.formula(formula_str), data = PMD)
+      summary_lm1 <- summary(lm1)
+      
+      # Extract estimate and p-value for the variable of interest (col)
+      estimate <- summary_lm1$coefficients[2, 1]  # 2nd row, 1st column (estimate)
+      p_value <- summary_lm1$coefficients[2, 4]   # 2nd row, 4th column (p-value)
+      
+      # Store the result in the results dataframe
+      results <- rbind(results, data.frame(Dependent_Variable = dep_var, 
+                                           Independent_Variable = col, 
+                                           Control_Variable = control_name,
+                                           Estimate = estimate, 
+                                           P_Value = p_value))
+    }
+  }
+}
+
+# Write the results to an Excel file
+write.xlsx(results, file = "/Users/mickey.rice/Desktop/results1.xlsx", rowNames = FALSE)
+```
+
+
+
+```{r}
+library(openxlsx)
+
+# List of dependent variables
+dependent_vars <- c('Accuracy', 'RT')
+
+# Independent variables to be tested sequentially
+selected_columns <- c('PHQ9', 'CESD', 'PP', 'N300')
+
+# List of additional controls
+additional_controls <- list(
+  SES = "PMD$avgpared",       # Socioeconomic status
+  ADHD = "PMD$ADHD",     # ADHD symptoms
+  Motivation = "PMD$Motivation", # motivation score
+  Sleepiness = "PMD$Sleepiness", # Sleepiness score
+  HrsSleep = "PMD$HrsSleep", # Hours of sleep the night before
+    Anxiety = 'STAIS', # State anxiety levels
+  PositiveAff = 'PosAff', # positive affect
+  NegativeAff = 'NegAff' # negative affect
+)
+
+# Initialize the results dataframe
+results <- data.frame(Dependent_Variable = character(), 
+                      Independent_Variable = character(), 
+                      Control_Variable = character(),
+                      Estimate = numeric(), 
+                      P_Value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Outer loop for dependent variables
+for (dep_var in dependent_vars) {
+  
+  # Inner loop for independent variables (tested sequentially)
+  for (col in selected_columns) {
+    
+    # Loop for additional controls
+    for (control_name in names(additional_controls)) {
+      control_var <- additional_controls[[control_name]]
+      
+      # Construct the formula for each model
+      formula_str <- paste("PMD$", dep_var, " ~ PMD$", col, " + PMD$Gender1 + PMD$Age + ", control_var, sep = "")
+      
+      # Run the linear model
+      lm1 <- lm(as.formula(formula_str), data = PMD)
+      summary_lm1 <- summary(lm1)
+      
+      # Extract estimate and p-value for the variable of interest (col)
+      estimate <- summary_lm1$coefficients[2, 1]  # 2nd row, 1st column (estimate)
+      p_value <- summary_lm1$coefficients[2, 4]   # 2nd row, 4th column (p-value)
+      
+      # Store the result in the results dataframe
+      results <- rbind(results, data.frame(Dependent_Variable = dep_var, 
+                                           Independent_Variable = col, 
+                                           Control_Variable = control_name,
+                                           Estimate = estimate, 
+                                           P_Value = p_value))
+    }
+  }
+}
+
+# Write the results to an Excel file
+write.xlsx(results, file = "/Users/mickey.rice/Desktop/results3.xlsx", rowNames = FALSE)
+```
+
+# Extra graph info 
+
+Paper 1-------------------------------------------------------------------------
+
+## Make a scatterplot:Metamemory (PRMQ1) & PM Accuracy
+```{r}
+ggplot(PMD, aes(x = PRMQ1, y = Accuracy)) +
+  geom_point() +
+    geom_smooth(method = "lm", color = "dark green") +
+  labs(title="Metamemory Predicting Prospective Memory Accuracy",
+       x="PRMQ Score", y = "Accuracy")+
+  theme_classic()  +
+  theme(text = element_text(size = 16))                    
+```
+
+
+## Make a scatterplot:Metamemory (PRMQ1) & PP
+```{r}
+ggplot(PMD, aes(x = PRMQ1, y = PP)) +
+  geom_point() +
+    geom_smooth(method = "lm", color = "dark green") +
+  labs(
+       x="PRMQ Score", y = "Prospective Positivity Amplitude (mV)")+
+  theme_classic()  +
+  theme(text = element_text(size = 18))                    
+```
+
+
+## Make a scatterplot:Metamemory (PRMQ1) & N300
+```{r}
+ggplot(PMD, aes(x = PRMQ1, y = N300)) +
+  geom_point() +
+    geom_smooth(method = "lm", color = "dark green") +
+  labs(title="Metamemory Predicting Cue Detection",
+       x="PRMQ Score", y = "N300 Amplitude (mV)")+
+  theme_classic()  +
+  theme(text = element_text(size = 18))                    
+```
+
+# No covariates
+# Regression: Metamemtory predicting Accuracy
+```{r}
+# scale = standardizing the coefficients 
+
+fit4 <- lm(scale(Accuracy) ~ scale(PRMQ1), data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(Accuracy) ~ scale(Confidence), data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(Accuracy) ~ scale(JOL), data = PMD)
+summary(fit6)
+
+```
+
+# Regression: Metamemtory predicting RT 
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(RT) ~ scale(PRMQ1), data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(RT) ~ scale(Confidence), data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(RT) ~ scale(JOL), data = PMD)
+summary(fit6)
+```
+
+# Regression: Metamemtory predicting N300 
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(N300) ~ scale(PRMQ1), data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(N300) ~ scale(Confidence), data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(N300) ~ scale(JOL), data = PMD)
+summary(fit6)
+```
+
+# Regression: Metamemtory predicting PP
+```{r}
+## scale = standardizing the coefficients 
+
+fit4 <- lm(scale(PP) ~ scale(PRMQ1), data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(PP) ~ scale(Confidence), data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(PP) ~ scale(JOL), data = PMD)
+summary(fit6)
+```
+
