@@ -1,0 +1,712 @@
+---
+title: "Prospective Memory, Metamemory, Depression"
+output: 
+  html_notebook:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+# Data preparation--------------------------------------------------------------
+
+# Using SQL to combine datasets and extract demographic info from screener
+```{r}
+#install.packages("readxl")  
+#install.packages("sqldf")   
+#install.packages("openxlsx") 
+
+library(readxl)
+library(sqldf)
+library(openxlsx)
+
+# Load the participant and screener files
+participants <- read_excel("/Users/mickey.rice/Desktop/Dissertation/PMD/ActualParticipants.xlsx")
+screener <- read_excel("/Users/mickey.rice/Desktop/Dissertation/PMD/Screener.xlsx")
+
+query <- "
+  SELECT p.*, 
+         s.[Q413_1] as ADHD1,
+         s.[Q414_1] as ADHD2,
+         s.[Q415_1] as ADHD3,
+         s.[Q416_1] as ADHD4,
+         s.[Q417_1] as ADHD5,
+         s.[Q418_1] as ADHD6,
+         s.[Q1.52] as SES1,
+         s.[Q1.53q] as SES2
+  FROM participants p
+  JOIN screener s
+  ON p.ID = s.ID
+"
+
+# Run the SQL query to combine the data
+combined_data <- sqldf(query)
+
+# View the combined data
+head(combined_data)
+
+# Save to a new Excel file
+write.xlsx(combined_data, "/Users/mickey.rice/Desktop/combined_data.xlsx")
+
+```
+
+# Add demographics info to data set with variables of interest
+
+# Load Data 
+```{r}
+df <- read_excel("/Users/mickey.rice/Desktop/Dissertation/PMD/pmd_data.xlsx")
+```
+
+# Combine data
+```{r}
+columns_to_add <- combined_data[, c("ID_number", "Gender", "Race", "Age", "Ethnicity",
+                                    "Handedness", "ADHD1", "ADHD2", "ADHD3", "ADHD4",
+                                    "ADHD5", "ADHD6", "SES1", "SES2")]
+
+PMD <- merge(df, columns_to_add, by = "ID_number")
+```
+
+# Add ADHD columns and SES columns
+```{r}
+library(dplyr)
+
+PMD$ADHD1 <- as.numeric(PMD$ADHD1)
+PMD$ADHD2 <- as.numeric(PMD$ADHD2)
+PMD$ADHD3 <- as.numeric(PMD$ADHD3)
+PMD$ADHD4 <- as.numeric(PMD$ADHD4)
+PMD$ADHD5 <- as.numeric(PMD$ADHD5)
+PMD$ADHD6 <- as.numeric(PMD$ADHD6)
+
+# Add a new column for the total ADHD scores
+PMD <- PMD %>%
+  mutate(ADHD = ADHD1 + ADHD2 + ADHD3 + ADHD4 + ADHD5 + ADHD6)
+
+library(readr)
+
+# Extract numeric part of the SES columns
+PMD$SES1 <- parse_number(PMD$SES1)
+PMD$SES2 <- parse_number(PMD$SES2)
+
+# Average together SES1 and SES2
+PMD <- PMD %>%
+  mutate(avgpared = rowMeans(across(c(SES1, SES2)), na.rm = TRUE))
+```
+
+# Load primary libaries for analyses
+```{r}
+library(psych)
+library(tidyverse)
+library(apaTables)
+library(ggplot2)
+library(mediation)
+library(interactions)
+library(jtools)
+library(rlang)
+```
+
+```{r}
+describe(PMD)
+```
+
+# Recode gender to be numeric
+```{r}
+PMD$Gender1<- 0
+PMD$Gender1<-ifelse(PMD$Gender=="Male", 0, 
+                    ifelse(PMD$Gender=="Female", 1, 2))
+```
+
+
+# Check to see if there is missing data
+```{r}
+any_missing <- any(is.na(PMD))
+print(any_missing)
+```
+
+```{r}
+library(naniar)
+# Visualize missing data pattern
+gg_miss_var(PMD)
+```
+
+# Fill missing values for Race
+# Missing values
+```{r}
+# Replace missing Race values with "Do not wish to respond"
+PMD$Race[is.na(PMD$Race)] <- "Do not wish to respond"
+```
+
+## Centering the variables for an interaction
+```{r}
+## centering the variable - most important for interaction
+PHQ9 <- PMD$PHQ9
+mean_PHQ9 <- mean(PHQ9)
+PHQ9_c <- PHQ9 - mean_PHQ9
+PMD$PHQ9_c <- PHQ9_c
+
+CESD <- PMD$CESD
+mean_CESD <- mean(CESD)
+CESD_c <- CESD - mean_CESD
+PMD$CESD_c <- CESD_c
+
+DASS <- PMD$DASS
+mean_DASS <- mean(DASS)
+DASS_c <- DASS - mean_DASS
+PMD$DASS_c <- DASS_c
+
+PRMQ1 <- PMD$PRMQ1
+mean_PRMQ1 <- mean(PRMQ1)
+PRMQ1_c <- PRMQ1 - mean_PRMQ1
+PMD$PRMQ1_c <- PRMQ1_c
+
+Confidence <- PMD$Confidence
+mean_Confidence <- mean(Confidence)
+Confidence_c <- Confidence - mean_Confidence
+PMD$Confidence_c <- Confidence_c
+
+JOL <- PMD$JOL
+mean_JOL <- mean(JOL)
+JOL_c <- JOL - mean_JOL
+PMD$JOL_c <- JOL_c
+
+
+N300 <- PMD$N300
+mean_N300 <- mean(N300)
+N300_c <- N300 - mean_N300
+PMD$N300_c <- N300_c
+
+PP <- PMD$PP
+mean_PP <- mean(PP)
+PP_c <- PP - mean_PP
+PMD$PP_c <- PP_c
+```
+
+# Analysis----------------------------------------------------------------------
+
+# Regression main effects-------------------------------------------------------
+
+## Regression: Depression predicting Accuracy controlling for age and gender
+```{r}
+fit1 <- lm(scale(Accuracy) ~ scale(PHQ9) + Age + Gender1, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(Accuracy) ~ scale(CESD) + Age + Gender1, data = PMD)
+summary(fit2)
+```
+
+## Regression: Depression predicting RT controlling for age and gender
+```{r}
+fit1 <- lm(scale(RT) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit2)
+```
+
+## Regression: Depression predicting metamemory controlling for age and gender
+```{r}
+fit1 <- lm(scale(PRMQ1) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(Confidence) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit2)
+
+fit3 <- lm(scale(JOL) ~ scale(PHQ9) + Gender1 + Age, data = PMD)
+summary(fit3)
+
+fit4 <- lm(scale(PRMQ1) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit4)
+
+fit5 <- lm(scale(Confidence) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit5)
+
+fit6 <- lm(scale(JOL) ~ scale(CESD) + Gender1 + Age, data = PMD)
+summary(fit6)
+```
+
+## Regression: Depression predicting N300 controlling for age and gender
+```{r}
+fit1 <- lm(scale(N300) ~ scale(PHQ9) + Age + Gender1, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(N300) ~ scale(CESD) + Age + Gender1, data = PMD)
+summary(fit2)
+
+```
+
+## Regression: Depression predicting PP controlling for age and gender
+```{r}
+fit1 <- lm(scale(PP) ~ scale(PHQ9) + Age + Gender1, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(PP) ~ scale(CESD) + Age + Gender1, data = PMD)
+summary(fit2)
+```
+
+
+## Regression: N300 predicting Accuracy and RT controlling for age and gender
+```{r}
+fit1 <- lm(scale(Accuracy) ~ scale(N300) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(N300) + Gender1 + Age, data = PMD)
+summary(fit2)
+```
+
+## Regression: PP predicting Accuracy and RT controlling for age and gender
+```{r}
+fit1 <- lm(scale(Accuracy) ~ scale(PP) + Gender1 + Age, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(PP) + Gender1 + Age, data = PMD)
+summary(fit2)
+```
+
+# Regression: Metamemtory predicting Accuracy controlling for age and gender
+```{r}
+fit1 <- lm(scale(Accuracy) ~ scale(PRMQ1) + Age + Gender1, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(Accuracy) ~ scale(Confidence) + Age + Gender1, data = PMD)
+summary(fit2)
+
+fit3 <- lm(scale(Accuracy) ~ scale(JOL) + Age + Gender1, data = PMD)
+summary(fit3)
+```
+
+# Regression: Metamemtory predicting RT controlling for age and gender
+```{r}
+fit1 <- lm(scale(RT) ~ scale(PRMQ1) + Age + Gender1, data = PMD)
+summary(fit1)
+
+fit2 <- lm(scale(RT) ~ scale(Confidence) + Age + Gender1, data = PMD)
+summary(fit2)
+
+fit3 <- lm(scale(RT) ~ scale(JOL) + Age + Gender1, data = PMD)
+summary(fit3)
+```
+
+## Effect sizes
+```{r}
+DVs <- c("Accuracy", "RT", "N300", "PP", "PRMQ1", "Confidence", "JOL")
+IVs <- c("PHQ9", "CESD", "PRMQ1", "Confidence", "JOL", "N300", "PP")
+
+# Create a list to store the results
+results <- list()
+
+# Loop through DVs and IVs to calculate partial R-squared
+for (dv in DVs) {
+  for (iv in IVs) {
+    # Skip if the DV and IV are the same
+    if (dv == iv) {
+      next
+    }
+    
+    # Full model (with the IV)
+    full_model <- lm(as.formula(paste(dv, "~", iv, "+ Age + Gender1")), data = PMD)
+    
+    # Reduced model (without the IV)
+    reduced_model <- lm(as.formula(paste(dv, "~", "Age + Gender1")), data = PMD)
+    
+    # R-squared for the full model
+    r_squared_full <- summary(full_model)$r.squared
+    
+    # R-squared for the reduced model
+    r_squared_reduced <- summary(reduced_model)$r.squared
+    
+    # Partial R-squared
+    partial_r_squared <- r_squared_full - r_squared_reduced
+    
+    # Store the result
+    results[[paste(dv, iv, sep = "_")]] <- partial_r_squared
+  }
+}
+
+# Convert results into a data frame
+results_df <- data.frame(
+  Model = names(results),
+  Partial_R_Squared = unlist(results)
+)
+
+# Write results to an Excel file
+write.xlsx(results_df, "Partial_R_Squared_Results.xlsx", rowNames = FALSE)
+
+print(results_df)
+
+```
+
+# Mediation --------------------------------------------------------------------
+## Mediatior: PRMQ1 (based on regression main effects)
+### IV: PHQ9
+```{r}
+model.M <- lm(PRMQ1 ~ PHQ9 + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + PHQ9 + Gender1 + Age, data = PMD)
+results_nomod <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PHQ9", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results_nomod)
+```
+
+### IV: CESD
+```{r}
+model.M <- lm(PRMQ1 ~ CESD + Gender1 + Age, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + CESD + Gender1 + Age, data =PMD)
+results_nomod <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "CESD", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results_nomod)
+```
+
+# Interactions -----------------------------------------------------------------
+## ERP components (N300 and PP) moderating the relationship between depression and PM accuracy
+```{r}
+lm1 <- lm(Accuracy ~ PHQ9_c * N300_c + Gender1 + Age, PMD)
+summary(lm1)
+
+lm2 <- lm(Accuracy ~ CESD_c * N300_c + Gender1 + Age, PMD)
+summary(lm2)
+
+lm3 <- lm(Accuracy ~ PHQ9_c * PP_c + Gender1 + Age, PMD)
+summary(lm3)
+
+lm4 <- lm(Accuracy ~ CESD_c * PP_c + Gender1 + Age, PMD)
+summary(lm4)
+```
+## Simple slopes
+### IV: PHQ9 * N300
+```{r}
+fitInt <- lm(Accuracy ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  PHQ9_c,
+  N300_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+
+### IV:CESD * N300
+```{r}
+fitInt <- lm(Accuracy ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+summary(fitInt)
+
+sim_slopes(
+  fitInt,
+  CESD_c,
+  N300_c,
+  mod2 = NULL,
+  modx.values = NULL,
+  mod2.values = NULL,
+  centered = "none",
+  data = PMD,
+  cond.int = FALSE,
+  johnson_neyman = TRUE,
+  jnplot = FALSE,
+  jnalpha = 0.05,
+  robust = FALSE,
+  digits = getOption("jtools-digits", default = 2),
+  pvals = TRUE,
+  confint = FALSE,
+  ci.width = 0.95)
+```
+## Interaction plots
+```{r}
+fitInt <- lm(Accuracy ~ PHQ9_c * N300_c + Gender1 + Age, data = PMD)
+
+plot <- interact_plot(fitInt, pred = PHQ9_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")  
+
+
+# Customize the axis titles
+plot <- plot + 
+  labs(x = "PHQ-9 Scores",  
+       y = "Accuracy",
+       color = "N300_c") 
+
+print(plot)
+
+ggsave("PHQ9*N300_Accuracy", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+       
+```
+
+```{r}
+fitInt <- lm(Accuracy ~ CESD_c * N300_c + Gender1 + Age, data = PMD)
+
+plot <- interact_plot(fitInt, pred = CESD_c, modx = N300_c, 
+               plot.points = TRUE,    # To show individual data points
+               interval = TRUE,       # To include confidence intervals
+               colors = "Set1")       
+
+
+# Customize the axis titles
+plot <- plot + 
+  labs(x = "CES-D Scores",  
+       y = "Accuracy",
+       color = "N300_c") 
+
+print(plot)
+
+ggsave("CESD*N300_Accuracy", path = '/Users/mickey.rice/Desktop/', bg="white", width = 5, height = 5, device='jpeg', dpi= 700)
+       
+```
+
+# Moderated Mediation ----------------------------------------------------------
+## Moderator on the direct pathway: N300 moderating depression -> accuracy in the mediation model
+
+### PHQ9
+```{r}
+## Remove age as a covariate to resolve issues with multicollinearity/over fitting 
+
+model.M <- lm(PRMQ1 ~ PHQ9_c + Gender1, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + PHQ9_c * N300_c + Gender1, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "PHQ9_c", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+```
+
+### CESD
+```{r}
+model.M <- lm(PRMQ1 ~ CESD_c + Gender1, data = PMD)
+model.Y <- lm(Accuracy ~ PRMQ1 + CESD_c * N300_c + Gender1, data =PMD)
+results <- mediation::mediate(model.M, 
+                              model.Y, 
+                              treat =  "CESD_c", 
+                              mediator= 'PRMQ1', 
+                              boot=TRUE, sims=10000)
+summary(results)
+```
+
+## Check conditional indirect effects (at 3 levels of the moderator, N300)
+### PHQ9
+```{r}
+# Define values for the moderator (W) at mean, mean + 1 SD, and mean - 1 SD
+mean_W <- mean(PMD$N300_c, na.rm = TRUE)
+sd_W <- sd(PMD$N300_c, na.rm = TRUE)
+
+W_levels <- c(mean_W, mean_W + sd_W, mean_W - sd_W)
+
+# List to store results for each level of W
+results <- list()
+
+for (i in 1:length(W_levels)) {
+  # Create a copy of the data with N300_c set to the specific level
+  PMD_subset <- PMD
+  PMD_subset$N300_c <- W_levels[i]
+  
+  # Define the mediator and outcome models
+  mediator_model <- lm(PRMQ1 ~ PHQ9_c + Gender1, data = PMD_subset)
+  outcome_model <- lm(Accuracy ~ PRMQ1 + PHQ9_c * N300_c + Gender1, data = PMD_subset)
+  
+  # Run the mediation analysis
+  mediation_results <- mediation::mediate(mediator_model, 
+                               outcome_model, 
+                               treat = "PHQ9_c", 
+                               mediator = "PRMQ1", 
+                               boot = TRUE, sims = 10000)
+  
+  # Store the mediation results for each level
+  results[[paste0("N300_c_", i)]] <- summary(mediation_results)
+}
+
+# Display the results for each level of W
+results
+```
+
+### CESD
+```{r}
+# Define values for the moderator (W) at mean, mean + 1 SD, and mean - 1 SD
+mean_W <- mean(PMD$N300_c, na.rm = TRUE)
+sd_W <- sd(PMD$N300_c, na.rm = TRUE)
+
+W_levels <- c(mean_W, mean_W + sd_W, mean_W - sd_W)
+
+# List to store results for each level of W
+results <- list()
+
+for (i in 1:length(W_levels)) {
+  # Create a copy of the data with N300_c set to the specific level
+  PMD_subset <- PMD
+  PMD_subset$N300_c <- W_levels[i]
+  
+  # Define the mediator and outcome models
+  mediator_model <- lm(PRMQ1 ~ CESD_c + Gender1, data = PMD_subset)
+  outcome_model <- lm(Accuracy ~ PRMQ1 + CESD_c * N300_c + Gender1, data = PMD_subset)
+  
+  # Run the mediation analysis
+  mediation_results <- mediation::mediate(mediator_model, 
+                               outcome_model, 
+                               treat = "CESD_c", 
+                               mediator = "PRMQ1", 
+                               boot = TRUE, sims = 10000)
+  
+  # Store the mediation results for each level
+  results[[paste0("N300_c_", i)]] <- summary(mediation_results)
+}
+
+# Display the results for each level of W
+results
+```
+
+# Interpretation
+Final findings: Depression (PHQ9 and CESD) negatively predicts PM accuracy. This 
+relationship is strengthened by a more negative N300 amplitude, which represents 
+larger cue detection neural responses. In other words, larder cue detection 
+responses enhance depression's negative role in PM accuracy. 
+Metamemory beliefs (PRMQ1) fully mediate the relationship between depression and 
+PM accuracy. When evaluating the moderated mediation, metamemory's role as a 
+mediator is resilient to different levels of N300 amplitudes (i.e., cue detection
+responses). 
+Both the mediation and moderation effects exist independently. 
+
+# Sensitivity analyses for main effects ----------------------------------------
+
+## Additional covariates for metamemory -> PM and ERPs 
+## parental education, ADHD, motivation, sleepiness, sleep hours
+```{r}
+library(openxlsx)
+
+# List of dependent variables
+dependent_vars <- c('Accuracy', 'RT', 'PP', 'N300')
+
+# Independent variables to be tested sequentially
+selected_columns <- c('PRMQ1', 'Confidence', 'JOL')
+
+# List of additional controls
+additional_controls <- list(
+  SES = "PMD$avgpared",       # Socioeconomic status
+  ADHD = "PMD$ADHD",     # ADHD symptoms
+  Motivation = "PMD$Motivation", # motivation score
+  Sleepiness = "PMD$Sleepiness", # Sleepiness score
+  HrsSleep = "PMD$HrsSleep" # Hours of sleep the night before
+)
+
+# Initialize the results dataframe
+results <- data.frame(Dependent_Variable = character(), 
+                      Independent_Variable = character(), 
+                      Control_Variable = character(),
+                      Estimate = numeric(), 
+                      P_Value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Outer loop for dependent variables
+for (dep_var in dependent_vars) {
+  
+  # Inner loop for independent variables (tested sequentially)
+  for (col in selected_columns) {
+    
+    # Loop for additional controls
+    for (control_name in names(additional_controls)) {
+      control_var <- additional_controls[[control_name]]
+      
+      # Construct the formula for each model
+      formula_str <- paste("PMD$", dep_var, " ~ PMD$", col, " + PMD$Gender1 + PMD$Age + ", control_var, sep = "")
+      
+      # Run the linear model
+      lm1 <- lm(as.formula(formula_str), data = PMD)
+      summary_lm1 <- summary(lm1)
+      
+      # Extract estimate and p-value for the variable of interest (col)
+      estimate <- summary_lm1$coefficients[2, 1]  # 2nd row, 1st column (estimate)
+      p_value <- summary_lm1$coefficients[2, 4]   # 2nd row, 4th column (p-value)
+      
+      # Store the result in the results dataframe
+      results <- rbind(results, data.frame(Dependent_Variable = dep_var, 
+                                           Independent_Variable = col, 
+                                           Control_Variable = control_name,
+                                           Estimate = estimate, 
+                                           P_Value = p_value))
+    }
+  }
+}
+
+# Write the results to an Excel file
+write.xlsx(results, file = "/Users/mickey.rice/Desktop/results1.xlsx", rowNames = FALSE)
+```
+
+## Additional covariates for depression and ERPS -> PM 
+## parental education, ADHD, motivation, sleepiness, sleep hours, anxiety, positive and negative affect
+```{r}
+library(openxlsx)
+
+# List of dependent variables
+dependent_vars <- c('Accuracy', 'RT')
+
+# Independent variables to be tested sequentially
+selected_columns <- c('PHQ9', 'CESD', 'PP', 'N300')
+
+# List of additional controls
+additional_controls <- list(
+  SES = "PMD$avgpared",       # Socioeconomic status
+  ADHD = "PMD$ADHD",     # ADHD symptoms
+  Motivation = "PMD$Motivation", # motivation score
+  Sleepiness = "PMD$Sleepiness", # Sleepiness score
+  HrsSleep = "PMD$HrsSleep", # Hours of sleep the night before
+    Anxiety = 'STAIS', # State anxiety levels
+  PositiveAff = 'PosAff', # positive affect
+  NegativeAff = 'NegAff' # negative affect
+)
+
+# Initialize the results dataframe
+results <- data.frame(Dependent_Variable = character(), 
+                      Independent_Variable = character(), 
+                      Control_Variable = character(),
+                      Estimate = numeric(), 
+                      P_Value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Outer loop for dependent variables
+for (dep_var in dependent_vars) {
+  
+  # Inner loop for independent variables (tested sequentially)
+  for (col in selected_columns) {
+    
+    # Loop for additional controls
+    for (control_name in names(additional_controls)) {
+      control_var <- additional_controls[[control_name]]
+      
+      # Construct the formula for each model
+      formula_str <- paste("PMD$", dep_var, " ~ PMD$", col, " + PMD$Gender1 + PMD$Age + ", control_var, sep = "")
+      
+      # Run the linear model
+      lm1 <- lm(as.formula(formula_str), data = PMD)
+      summary_lm1 <- summary(lm1)
+      
+      # Extract estimate and p-value for the variable of interest (col)
+      estimate <- summary_lm1$coefficients[2, 1]  # 2nd row, 1st column (estimate)
+      p_value <- summary_lm1$coefficients[2, 4]   # 2nd row, 4th column (p-value)
+      
+      # Store the result in the results dataframe
+      results <- rbind(results, data.frame(Dependent_Variable = dep_var, 
+                                           Independent_Variable = col, 
+                                           Control_Variable = control_name,
+                                           Estimate = estimate, 
+                                           P_Value = p_value))
+    }
+  }
+}
+
+# Write the results to an Excel file
+write.xlsx(results, file = "/Users/mickey.rice/Desktop/results2.xlsx", rowNames = FALSE)
+```
+
